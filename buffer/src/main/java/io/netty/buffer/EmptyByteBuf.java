@@ -414,6 +414,11 @@ public final class EmptyByteBuf extends ByteBuf {
     }
 
     @Override
+    public ByteBuf setBytes(int index, ByteBuffer src, int srcIndex, int length) {
+        return checkIndex(index, length);
+    }
+
+    @Override
     public int setBytes(int index, InputStream in, int length) {
         checkIndex(index, length);
         return 0;
@@ -624,6 +629,11 @@ public final class EmptyByteBuf extends ByteBuf {
     @Override
     public ByteBuf writeBytes(ByteBuffer src) {
         return checkLength(src.remaining());
+    }
+
+    @Override
+    public ByteBuf writeBytes(ByteBuffer src, int index, int length) {
+        return checkLength(length);
     }
 
     @Override

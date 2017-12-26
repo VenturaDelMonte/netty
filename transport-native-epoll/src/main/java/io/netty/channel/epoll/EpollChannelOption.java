@@ -33,6 +33,8 @@ public final class EpollChannelOption<T> extends ChannelOption<T> {
     public static final ChannelOption<EpollMode> EPOLL_MODE =
             valueOf("EPOLL_MODE");
 
+    public static final ChannelOption<Boolean> CREATE_CRC32_SERVER = valueOf("CREATE_CRC32_SERVER");
+
     @SuppressWarnings({ "unused", "deprecation" })
     private EpollChannelOption(String name) {
         super(name);

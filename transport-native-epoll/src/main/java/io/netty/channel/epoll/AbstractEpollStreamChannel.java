@@ -28,9 +28,11 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.DefaultFileRegion;
+import io.netty.channel.CRC32FileRegion;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.unix.FileDescriptor;
+import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 
@@ -44,10 +46,13 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
 
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(ByteBuf.class) + ", " +
+                    StringUtil.simpleClassName(CRC32FileRegion.class) + ", " +
                     StringUtil.simpleClassName(DefaultFileRegion.class) + ')';
 
     private volatile boolean inputShutdown;
     private volatile boolean outputShutdown;
+
+    protected int crc32Server = -1;
 
     protected AbstractEpollStreamChannel(Channel parent, int fd) {
         super(parent, fd, Native.EPOLLIN, true);
@@ -228,6 +233,72 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
         return done;
     }
 
+    private FastThreadLocal<Integer> crc32AlgFdsClients = new FastThreadLocal<Integer>() {
+        @Override
+        protected Integer initialValue() throws Exception {
+            int fd = Native.connectCrc32Socket(crc32Server);
+            Native.setReceiveBufferSize(fd, 65556);
+            Native.setSendBufferSize(fd, 65536);
+            return fd;
+        }
+
+        @Override
+        protected void onRemoval(Integer value) throws Exception {
+            Native.close(value);
+        }
+    };
+
+    /**
+     * Write a {@link CRC32FileRegion}
+     *
+     * @param region        the {@link DefaultFileRegion} from which the bytes should be written
+     * @return amount       the amount of written bytes
+     */
+    private boolean writeFileRegionWithCRC32(
+            ChannelOutboundBuffer in, CRC32FileRegion region, int writeSpinCount) throws Exception {
+        final long regionCount = region.count() - region.checksumLength(); // file size
+
+        if (region.transfered() >= regionCount) {
+            in.remove();
+            return true;
+        }
+
+        final boolean isChecksumTransferred = region.isChecksumTrasferred();
+        final long baseOffset = region.position();
+        boolean done = false;
+        long flushedAmount = 0;
+        int crc32_client = crc32AlgFdsClients.get();
+        int fd = fd().intValue();
+
+        for (int i = writeSpinCount - 1; i >= 0; i--) {
+            final long offset = region.transfered();
+
+            long localFlushedAmount = Native.sendfilecrc32(fd, region, baseOffset,
+                    offset, regionCount - offset, regionCount, isChecksumTransferred, crc32_client);
+            if (localFlushedAmount == 0) {
+                break;
+            }
+
+            flushedAmount += localFlushedAmount;
+            if (region.transfered() >= regionCount) {
+                done = true;
+                break;
+            }
+        }
+
+        if (flushedAmount > 0) {
+            in.progress(flushedAmount);
+        }
+
+        if (done) {
+            in.remove();
+        } else {
+            // Returned EAGAIN need to set EPOLLOUT
+            setFlag(Native.EPOLLOUT);
+        }
+        return done;
+    }
+
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
         int writeSpinCount = config().getWriteSpinCount();
@@ -263,6 +334,13 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
         if (msg instanceof ByteBuf) {
             ByteBuf buf = (ByteBuf) msg;
             if (!writeBytes(in, buf, writeSpinCount)) {
+                // was not able to write everything so break here we will get notified later again once
+                // the network stack can handle more writes.
+                return false;
+            }
+        } else if (msg instanceof CRC32FileRegion) {
+            CRC32FileRegion region = (CRC32FileRegion) msg;
+            if (!writeFileRegionWithCRC32(in, region, writeSpinCount)) {
                 // was not able to write everything so break here we will get notified later again once
                 // the network stack can handle more writes.
                 return false;
@@ -339,7 +417,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
             return buf;
         }
 
-        if (msg instanceof DefaultFileRegion) {
+        if (msg instanceof DefaultFileRegion || msg instanceof CRC32FileRegion) {
             return msg;
         }
 

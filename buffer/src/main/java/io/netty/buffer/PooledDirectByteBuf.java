@@ -287,6 +287,21 @@ final class PooledDirectByteBuf extends PooledByteBuf<ByteBuffer> {
     }
 
     @Override
+    public ByteBuf setBytes(int dstIndex, ByteBuffer src, int srcIndex, int srcLength) {
+        ensureAccessible();
+
+        ByteBuffer tmpBuf = internalNioBuffer();
+        if (src == tmpBuf) {
+            src = src.duplicate();
+        }
+        tmpBuf.clear().position(dstIndex).limit(dstIndex + srcLength);
+        src.position(srcIndex).limit(srcIndex + srcLength);
+        tmpBuf.put(src);
+
+        return this;
+    }
+
+    @Override
     public int setBytes(int index, InputStream in, int length) throws IOException {
         checkIndex(index, length);
         byte[] tmp = new byte[length];

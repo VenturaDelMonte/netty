@@ -1001,6 +1001,8 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      */
     public abstract ByteBuf setBytes(int index, ByteBuffer src);
 
+    public abstract ByteBuf setBytes(int dstIndex, ByteBuffer src, int srcIndex, int srcLength);
+
     /**
      * Transfers the content of the specified source stream to this buffer
      * starting at the specified absolute {@code index}.
@@ -1495,6 +1497,18 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      *            {@code this.writableBytes}
      */
     public abstract ByteBuf writeBytes(ByteBuffer src);
+
+     /**
+     * Transfers the specified source buffer's data to this buffer starting at
+     * the current {@code writerIndex} until the source buffer's position
+     * reaches {@code index + length} offset, and increases the {@code writerIndex} by the
+     * number of the transferred bytes.
+     *
+     * @throws IndexOutOfBoundsException
+     *         if {@code src.remaining()} is greater than
+     *            {@code this.writableBytes}
+     */
+    public abstract ByteBuf writeBytes(ByteBuffer src, int index, int length);
 
     /**
      * Transfers the content of the specified stream to this buffer

@@ -60,6 +60,23 @@ public final class NativeLibraryLoader {
         }
     }
 
+    /**
+     * The shading prefix added to this class's full name.
+     *
+     * @throws UnsatisfiedLinkError if the shader used something other than a prefix
+     */
+    private static String calculatePackagePrefix() {
+        String maybeShaded = NativeLibraryLoader.class.getName();
+        // Use ! instead of . to avoid shading utilities from modifying the string
+        String expected = "io!netty!util!internal!NativeLibraryLoader".replace('!', '.');
+        if (!maybeShaded.endsWith(expected)) {
+            throw new UnsatisfiedLinkError(String.format(
+                    "Could not find prefix added to %s to get %s. When shading, only adding a "
+                            + "package prefix is supported", expected, maybeShaded));
+        }
+        return maybeShaded.substring(0, maybeShaded.length() - expected.length());
+    }
+
     private static File tmpdir() {
         File f;
         try {
@@ -150,7 +167,8 @@ public final class NativeLibraryLoader {
     /**
      * Load the given library with the specified {@link java.lang.ClassLoader}
      */
-    public static void load(String name, ClassLoader loader) {
+    public static void load(String originalName, ClassLoader loader) {
+        String name = calculatePackagePrefix().replace('.', '_') + originalName;
         String libname = System.mapLibraryName(name);
         String path = NATIVE_RESOURCE_HOME + libname;
 
@@ -163,7 +181,9 @@ public final class NativeLibraryLoader {
             }
         }
 
+        logger.debug("Going to load library {} - {} - {} - {}", name, libname, path, originalName);
         if (url == null) {
+            logger.debug("Going to load library {}", name);
             // Fall back to normal loading of JNI stuff
             System.loadLibrary(name);
             return;
@@ -177,7 +197,9 @@ public final class NativeLibraryLoader {
         File tmpFile = null;
         boolean loaded = false;
         try {
+            logger.debug("Going to first create library copy in {} - {} - {}", prefix, suffix, WORKDIR);
             tmpFile = File.createTempFile(prefix, suffix, WORKDIR);
+            logger.debug("temp file created at {}", tmpFile.getPath());
             in = url.openStream();
             out = new FileOutputStream(tmpFile);
 
@@ -189,8 +211,9 @@ public final class NativeLibraryLoader {
             out.flush();
             out.close();
             out = null;
-
+            logger.debug("temp file ready to be loaded from {}", tmpFile.getPath());
             System.load(tmpFile.getPath());
+            logger.debug("temp file ready to be loaded from {}", tmpFile.getPath());
             loaded = true;
         } catch (Exception e) {
             throw (UnsatisfiedLinkError) new UnsatisfiedLinkError(

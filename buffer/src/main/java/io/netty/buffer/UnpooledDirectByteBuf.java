@@ -446,6 +446,21 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
+    public ByteBuf setBytes(int dstIndex, ByteBuffer src, int srcIndex, int srcLength) {
+        ensureAccessible();
+
+        ByteBuffer tmpBuf = internalNioBuffer();
+        if (src == tmpBuf) {
+            src = src.duplicate();
+        }
+        tmpBuf.clear().position(dstIndex).limit(dstIndex + srcLength);
+        src.position(srcIndex).limit(srcIndex + srcLength);
+        tmpBuf.put(src);
+
+        return this;
+    }
+
+    @Override
     public ByteBuf getBytes(int index, OutputStream out, int length) throws IOException {
         getBytes(index, out, length, false);
         return this;

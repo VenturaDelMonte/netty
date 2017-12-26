@@ -33,6 +33,7 @@
 #define UIO_MAXIOV 1024
 #endif /* UIO_MAXIOV */
 
+/*
 jint Java_io_netty_channel_epoll_Native_eventFd(JNIEnv* env, jclass clazz);
 void Java_io_netty_channel_epoll_Native_eventFdWrite(JNIEnv* env, jclass clazz, jint fd, jlong value);
 void Java_io_netty_channel_epoll_Native_eventFdRead(JNIEnv* env, jclass clazz, jint fd);
@@ -71,6 +72,9 @@ jint Java_io_netty_channel_epoll_Native_connectDomainSocket(JNIEnv* env, jclass 
 jint Java_io_netty_channel_epoll_Native_finishConnect0(JNIEnv* env, jclass clazz, jint fd);
 jint Java_io_netty_channel_epoll_Native_accept0(JNIEnv* env, jclass clazz, jint fd, jbyteArray acceptedAddress);
 jlong Java_io_netty_channel_epoll_Native_sendfile0(JNIEnv* env, jclass clazz, jint fd, jobject fileRegion, jlong base_off, jlong off, jlong len);
+jint Java_io_netty_channel_epoll_Native_createCRC32SocketAlg0(JNIEnv* env, jclass clazz);
+jint Java_io_netty_channel_epoll_Native_connectToCRC32Alg(JNIEnv* env, jclass clazz, jint server_fd);
+jlong Java_io_netty_channel_epoll_Native_sendfilecrc320(JNIEnv* env, jclass clazz, jint fd, jobject fileRegion, jlong base_off, jlong off, jlong len, jint crc32Fd);
 jbyteArray Java_io_netty_channel_epoll_Native_remoteAddress0(JNIEnv* env, jclass clazz, jint fd);
 jbyteArray Java_io_netty_channel_epoll_Native_localAddress0(JNIEnv* env, jclass clazz, jint fd);
 void Java_io_netty_channel_epoll_Native_setReuseAddress(JNIEnv* env, jclass clazz, jint fd, jint optval);
@@ -120,3 +124,4 @@ jint Java_io_netty_channel_epoll_Native_epollrdhup(JNIEnv* env, jclass clazz);
 jint Java_io_netty_channel_epoll_Native_epollet(JNIEnv* env, jclass clazz);
 jint Java_io_netty_channel_epoll_Native_sizeofEpollEvent(JNIEnv* env, jclass clazz);
 jint Java_io_netty_channel_epoll_Native_offsetofEpollData(JNIEnv* env, jclass clazz);
+*/

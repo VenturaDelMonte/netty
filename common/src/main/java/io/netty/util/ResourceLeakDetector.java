@@ -35,6 +35,10 @@ public final class ResourceLeakDetector<T> {
 
     private static final String PROP_LEVEL = "io.netty.leakDetectionLevel";
     private static final Level DEFAULT_LEVEL = Level.SIMPLE;
+    private static final String PROP_TARGET_RECORDS = "io.netty.leakDetection.targetRecords";
+    private static final int DEFAULT_TARGET_RECORDS = 4;
+
+    private static final int TARGET_RECORDS;
 
     /**
      * Represents the level of resource leak detection.
@@ -86,9 +90,12 @@ public final class ResourceLeakDetector<T> {
             }
         }
 
+        TARGET_RECORDS = SystemPropertyUtil.getInt(PROP_TARGET_RECORDS, DEFAULT_TARGET_RECORDS);
+
         ResourceLeakDetector.level = level;
         if (logger.isDebugEnabled()) {
             logger.debug("-D{}: {}", PROP_LEVEL, level.name().toLowerCase());
+            logger.debug("-D{}: {}", PROP_TARGET_RECORDS, TARGET_RECORDS);
         }
     }
 
@@ -253,8 +260,6 @@ public final class ResourceLeakDetector<T> {
 
     private final class DefaultResourceLeak extends PhantomReference<Object> implements ResourceLeak {
 
-        private static final int MAX_RECORDS = 4;
-
         private final String creationRecord;
         private final Deque<String> lastRecords = new ArrayDeque<String>();
         private final AtomicBoolean freed;
@@ -297,7 +302,7 @@ public final class ResourceLeakDetector<T> {
                     if (size == 0 || !lastRecords.getLast().equals(value)) {
                         lastRecords.add(value);
                     }
-                    if (size > MAX_RECORDS) {
+                    if (size > TARGET_RECORDS) {
                         lastRecords.removeFirst();
                     }
                 }

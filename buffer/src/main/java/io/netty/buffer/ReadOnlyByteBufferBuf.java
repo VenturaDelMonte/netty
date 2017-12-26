@@ -253,6 +253,11 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
+    public ByteBuf setBytes(int dstIndex, ByteBuffer src, int srcIndex, int srcLength) {
+        throw new ReadOnlyBufferException();
+    }
+
+    @Override
     public int setBytes(int index, InputStream in, int length) throws IOException {
         throw new ReadOnlyBufferException();
     }

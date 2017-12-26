@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2014 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,27 +13,23 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.buffer;
+package io.netty.channel.epoll;
 
-import static org.junit.Assert.*;
+import java.net.InetSocketAddress;
 
 /**
- * Tests big-endian heap channel buffers
+ * Act as special {@link InetSocketAddress} to be able to easily pass all needed data from JNI without the need
+ * to create more objects then needed.
  */
-public class PooledBigEndianHeapByteBufTest extends AbstractByteBufTest {
+final class DatagramSocketAddress extends InetSocketAddress {
 
-    private ByteBuf buffer;
+    private static final long serialVersionUID = 1348596211215015739L;
 
-    @Override
-    protected ByteBuf newBuffer(int length) {
-        buffer = PooledByteBufAllocator.DEFAULT.heapBuffer(length);
-        assertEquals(0, buffer.writerIndex());
-        return buffer;
+    // holds the amount of received bytes
+    final int receivedAmount;
+
+    DatagramSocketAddress(String addr, int port, int receivedAmount) {
+        super(addr, port);
+        this.receivedAmount = receivedAmount;
     }
-
-    @Override
-    protected ByteBuf[] components() {
-        return new ByteBuf[] { buffer };
-    }
-
 }

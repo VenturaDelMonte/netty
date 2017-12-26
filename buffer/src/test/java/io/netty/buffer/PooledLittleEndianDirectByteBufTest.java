@@ -38,4 +38,5 @@ public class PooledLittleEndianDirectByteBufTest extends AbstractByteBufTest {
     protected ByteBuf[] components() {
         return new ByteBuf[] { buffer };
     }
+
 }

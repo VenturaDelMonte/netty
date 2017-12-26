@@ -14,5 +14,11 @@
  * under the License.
  */
 #include <jni.h>
+/*
+jint Java_io_netty_channel_unix_FileDescriptor_close(JNIEnv* env, jclass clazz, jint fd);
+*/
 
-int Java_io_netty_channel_unix_FileDescriptor_close(JNIEnv* env, jclass clazz, jint fd);
+// JNI initialization hooks. Users of this file are responsible for calling these in the JNI_OnLoad and JNI_OnUnload methods.
+jint netty_unix_filedescriptor_JNI_OnLoad(JNIEnv* env, const char* packagePrefix);
+void netty_unix_filedescriptor_JNI_OnUnLoad(JNIEnv* env);
+
