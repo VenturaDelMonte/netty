@@ -26,6 +26,8 @@ import java.util.Map;
 public class EpollChannelConfig extends DefaultChannelConfig {
     final AbstractEpollChannel channel;
 
+    private volatile boolean allowCreateCrc32;
+
     EpollChannelConfig(AbstractEpollChannel channel) {
         super(channel);
         this.channel = channel;
@@ -33,7 +35,9 @@ public class EpollChannelConfig extends DefaultChannelConfig {
 
     @Override
     public Map<ChannelOption<?>, Object> getOptions() {
-        return getOptions(super.getOptions(), EpollChannelOption.EPOLL_MODE);
+        return getOptions(super.getOptions(),
+                EpollChannelOption.EPOLL_MODE,
+                EpollChannelOption.CREATE_CRC32_SERVER);
     }
 
     @SuppressWarnings("unchecked")
@@ -41,6 +45,8 @@ public class EpollChannelConfig extends DefaultChannelConfig {
     public <T> T getOption(ChannelOption<T> option) {
         if (option == EpollChannelOption.EPOLL_MODE) {
             return (T) getEpollMode();
+        } else if (option == EpollChannelOption.CREATE_CRC32_SERVER) {
+            return (T) Boolean.valueOf(allowCreateCrc32);
         }
         return super.getOption(option);
     }
@@ -50,6 +56,8 @@ public class EpollChannelConfig extends DefaultChannelConfig {
         validate(option, value);
         if (option == EpollChannelOption.EPOLL_MODE) {
             setEpollMode((EpollMode) value);
+        } else if (option == EpollChannelOption.CREATE_CRC32_SERVER) {
+            allowCreateCrc32 = (Boolean) value;
         } else {
             return super.setOption(option, value);
         }

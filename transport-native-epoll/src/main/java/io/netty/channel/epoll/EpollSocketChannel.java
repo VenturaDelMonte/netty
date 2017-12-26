@@ -49,6 +49,16 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
         local = Native.localAddress(fd);
     }
 
+    EpollSocketChannel(Channel parent, int fd, InetSocketAddress remote, int crc32ServerSocket) {
+        super(parent, fd);
+        config = new EpollSocketChannelConfig(this);
+        // Directly cache the remote and local addresses
+        // See https://github.com/netty/netty/issues/2359
+        this.remote = remote;
+        local = Native.localAddress(fd);
+        crc32Server = crc32ServerSocket;
+    }
+
     public EpollSocketChannel() {
         super(Native.socketStreamFd());
         config = new EpollSocketChannelConfig(this);
@@ -65,6 +75,12 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
         // address from it. This is needed as the FileDescriptor may be bound/connected already.
         remote = Native.remoteAddress(fd.intValue());
         local = Native.localAddress(fd.intValue());
+    }
+
+    protected void createCrc32Server() {
+        if (config().getOption(EpollChannelOption.CREATE_CRC32_SERVER) && crc32Server == -1) {
+            crc32Server = Native.createCrc32Socket();
+        }
     }
 
     /**
@@ -117,6 +133,8 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
         int fd = fd().intValue();
         Native.bind(fd, localAddress);
         this.local = Native.localAddress(fd);
+        // crc32 hook - this is very ugly - i must contact netty's dev at some point
+        createCrc32Server();
     }
 
     @Override
@@ -191,6 +209,10 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
         //
         // See https://github.com/netty/netty/issues/3463
         local = Native.localAddress(fd);
+
+        // crc32 hook - this is very ugly - i must contact netty's dev at some point
+        createCrc32Server();
+
         return connected;
     }
 

@@ -16,6 +16,7 @@
 package io.netty.channel.epoll;
 
 
+import io.netty.channel.CRC32FileRegion;
 import io.netty.channel.ChannelException;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.unix.DomainSocketAddress;
@@ -23,6 +24,8 @@ import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.NativeLibraryLoader;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.net.Inet6Address;
@@ -34,6 +37,24 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.util.Locale;
 
+import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.epollerr;
+import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.epollet;
+import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.epollin;
+import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.epollout;
+import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.epollrdhup;
+import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.errnoEAGAIN;
+import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.errnoEBADF;
+import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.errnoECONNRESET;
+import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.errnoEINPROGRESS;
+import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.errnoEPIPE;
+import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.errnoEWOULDBLOCK;
+import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.iovMax;
+import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.isSupportingSendmmsg;
+import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.isSupportingTcpFastopen;
+import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.kernelVersion;
+import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.strError;
+import static io.netty.channel.epoll.NativeStaticallyReferencedJniMethods.uioMaxIov;
+
 /**
  * Native helper methods
  *
@@ -41,12 +62,38 @@ import java.util.Locale;
  */
 final class Native {
 
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(Native.class);
+
     static {
+        try {
+            // First, try calling a side-effect free JNI method to see if the library was already
+            // loaded by the application.
+            offsetofEpollData();
+        } catch (UnsatisfiedLinkError ignore) {
+            // The library was not previously loaded, load it now.
+            loadNativeLibrary();
+        }
+    }
+
+    private static void loadNativeLibrary() {
         String name = SystemPropertyUtil.get("os.name").toLowerCase(Locale.UK).trim();
         if (!name.startsWith("linux")) {
             throw new IllegalStateException("Only supported on Linux");
         }
-        NativeLibraryLoader.load("netty-transport-native-epoll", PlatformDependent.getClassLoader(Native.class));
+        String staticLibName = "netty_transport_native_epoll";
+        String sharedLibName = staticLibName + '_' + PlatformDependent.normalizedArch();
+        ClassLoader cl = PlatformDependent.getClassLoader(Native.class);
+        try {
+            NativeLibraryLoader.load(sharedLibName, cl);
+        } catch (UnsatisfiedLinkError e1) {
+            try {
+                NativeLibraryLoader.load(staticLibName, cl);
+                logger.debug("Failed to load {}", sharedLibName, e1);
+            } catch (UnsatisfiedLinkError e2) {
+                //ThrowableUtil.addSuppressed(e1, e2);
+                throw e1;
+            }
+        }
     }
 
     // EventLoop operations and constants
@@ -54,10 +101,13 @@ final class Native {
     public static final int EPOLLOUT = epollout();
     public static final int EPOLLRDHUP = epollrdhup();
     public static final int EPOLLET = epollet();
+    public static final int EPOLLERR = epollerr();
 
     public static final int IOV_MAX = iovMax();
     public static final int UIO_MAX_IOV = uioMaxIov();
     public static final boolean IS_SUPPORTING_SENDMMSG = isSupportingSendmmsg();
+    public static final boolean IS_SUPPORTING_TCP_FASTOPEN = isSupportingTcpFastopen();
+    public static final String KERNEL_VERSION = kernelVersion();
 
     private static final byte[] IPV4_MAPPED_IPV6_PREFIX = {
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, (byte) 0xff, (byte) 0xff };
@@ -153,19 +203,10 @@ final class Native {
     }
     private static native int epollWait0(int efd, long address, int len, int timeout);
 
-    public static native void epollCtlAdd(int efd, final int fd, final int flags);
+    public static native int epollCtlAdd0(int efd, final int fd, final int flags);
 
-    public static native void epollCtlMod(int efd, final int fd, final int flags);
-    public static native void epollCtlDel(int efd, final int fd);
-
-    private static native int errnoEBADF();
-    private static native int errnoEPIPE();
-    private static native int errnoECONNRESET();
-
-    private static native int errnoEAGAIN();
-    private static native int errnoEWOULDBLOCK();
-    private static native int errnoEINPROGRESS();
-    private static native String strError(int err);
+    public static native int epollCtlMod0(int efd, final int fd, final int flags);
+    public static native int epollCtlDel0(int efd, final int fd);
 
     // File-descriptor operations
     public static void close(int fd) throws IOException {
@@ -175,7 +216,17 @@ final class Native {
         }
     }
 
+    public static int open(String path) throws IOException {
+        int fd = open0(path);
+        if (fd < 0) {
+            throw newIOException("close", fd);
+        }
+        return fd;
+    }
+
     private static native int close0(int fd);
+
+    private static native int open0(String path);
 
     public static int write(int fd, ByteBuffer buf, int pos, int limit) throws IOException {
         int res = write0(fd, buf, pos, limit);
@@ -250,15 +301,33 @@ final class Native {
         // the FileChannel field directly via JNI
         src.open();
 
-        long res = sendfile0(dest, src, baseOffset, offset, length);
+        long res = sendFile(dest, src, baseOffset, offset, length);
         if (res >= 0) {
             return res;
         }
         return ioResult("sendfile", (int) res, CONNECTION_RESET_EXCEPTION_SENDFILE);
     }
 
-    private static native long sendfile0(
+    private static native long sendFile(
             int dest, DefaultFileRegion src, long baseOffset, long offset, long length) throws IOException;
+
+    public static native int createCrc32Socket();
+
+    public static native int connectCrc32Socket(int serverFd);
+
+    public static long sendfilecrc32(
+            int dest, CRC32FileRegion src, long baseOffset,
+            long offset, long length, int crc32_client) throws IOException {
+
+        long res = sendFileCrc32(dest, src, baseOffset, offset, length, crc32_client);
+        if (res >= 0) {
+            return res;
+        }
+        return ioResult("sendfile", (int) res, CONNECTION_RESET_EXCEPTION_SENDFILE);
+    }
+
+    private static native long sendFileCrc32(
+            int dest, CRC32FileRegion src, long baseOffset, long offset, long length, int fdAlg) throws IOException;
 
     public static int sendTo(
             int fd, ByteBuffer buf, int pos, int limit, InetAddress addr, int port) throws IOException {
@@ -332,10 +401,10 @@ final class Native {
     private static native int sendToAddresses(
             int fd, long memoryAddress, int length, byte[] address, int scopeId, int port);
 
-    public static native EpollDatagramChannel.DatagramSocketAddress recvFrom(
+    public static native DatagramSocketAddress recvFrom(
             int fd, ByteBuffer buf, int pos, int limit) throws IOException;
 
-    public static native EpollDatagramChannel.DatagramSocketAddress recvFromAddress(
+    public static native DatagramSocketAddress recvFromAddress(
             int fd, long memoryAddress, int pos, int limit) throws IOException;
 
     public static int sendmmsg(
@@ -349,8 +418,6 @@ final class Native {
 
     private static native int sendmmsg0(
             int fd, NativeDatagramPacketArray.NativeDatagramPacket[] msgs, int offset, int len);
-
-    private static native boolean isSupportingSendmmsg();
 
     // socket operations
     public static int socketStreamFd() {
@@ -638,20 +705,9 @@ final class Native {
         }
     }
 
-    public static native String kernelVersion();
-
-    private static native int iovMax();
-
-    private static native int uioMaxIov();
-
     // epoll_event related
     public static native int sizeofEpollEvent();
     public static native int offsetofEpollData();
-
-    private static native int epollin();
-    private static native int epollout();
-    private static native int epollrdhup();
-    private static native int epollet();
 
     private Native() {
         // utility

@@ -73,7 +73,7 @@ final class EpollEventLoop extends SingleThreadEventLoop {
         try {
             this.epollFd = epollFd = Native.epollCreate();
             this.eventFd = eventFd = Native.eventFd();
-            Native.epollCtlAdd(epollFd, eventFd, Native.EPOLLIN);
+            Native.epollCtlAdd0(epollFd, eventFd, Native.EPOLLIN);
             success = true;
         } finally {
             if (!success) {
@@ -109,7 +109,7 @@ final class EpollEventLoop extends SingleThreadEventLoop {
     void add(AbstractEpollChannel ch) {
         assert inEventLoop();
         int fd = ch.fd().intValue();
-        Native.epollCtlAdd(epollFd, fd, ch.flags);
+        Native.epollCtlAdd0(epollFd, fd, ch.flags);
         channels.put(fd, ch);
     }
 
@@ -118,7 +118,7 @@ final class EpollEventLoop extends SingleThreadEventLoop {
      */
     void modify(AbstractEpollChannel ch) {
         assert inEventLoop();
-        Native.epollCtlMod(epollFd, ch.fd().intValue(), ch.flags);
+        Native.epollCtlMod0(epollFd, ch.fd().intValue(), ch.flags);
     }
 
     /**
@@ -132,7 +132,7 @@ final class EpollEventLoop extends SingleThreadEventLoop {
             if (channels.remove(fd) != null) {
                 // Remove the epoll. This is only needed if it's still open as otherwise it will be automatically
                 // removed once the file-descriptor is closed.
-                Native.epollCtlDel(epollFd, ch.fd().intValue());
+                Native.epollCtlDel0(epollFd, ch.fd().intValue());
             }
         }
     }
@@ -330,7 +330,7 @@ final class EpollEventLoop extends SingleThreadEventLoop {
                     }
                 } else {
                     // We received an event for an fd which we not use anymore. Remove it from the epoll_event set.
-                    Native.epollCtlDel(epollFd, fd);
+                    Native.epollCtlDel0(epollFd, fd);
                 }
             }
         }

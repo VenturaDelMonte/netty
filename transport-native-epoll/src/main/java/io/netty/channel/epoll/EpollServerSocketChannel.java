@@ -32,6 +32,8 @@ public final class EpollServerSocketChannel extends AbstractEpollServerChannel i
     private final EpollServerSocketChannelConfig config;
     private volatile InetSocketAddress local;
 
+    private int crc32ServerSocket = -1;
+
     public EpollServerSocketChannel() {
         super(Native.socketStreamFd());
         config = new EpollServerSocketChannelConfig(this);
@@ -63,6 +65,9 @@ public final class EpollServerSocketChannel extends AbstractEpollServerChannel i
         local = Native.localAddress(fd);
         Native.listen(fd, config.getBacklog());
         active = true;
+        if (config().getOption(EpollChannelOption.CREATE_CRC32_SERVER)) {
+            crc32ServerSocket = Native.createCrc32Socket();
+        }
     }
 
     @Override
@@ -87,6 +92,10 @@ public final class EpollServerSocketChannel extends AbstractEpollServerChannel i
 
     @Override
     protected Channel newChildChannel(int fd, byte[] address, int offset, int len) throws Exception {
-        return new EpollSocketChannel(this, fd, Native.address(address, offset, len));
+        return new EpollSocketChannel(
+                this,
+                fd,
+                Native.address(address, offset, len),
+                crc32ServerSocket);
     }
 }

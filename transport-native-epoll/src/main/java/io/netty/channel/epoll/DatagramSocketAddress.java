@@ -13,12 +13,23 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-#include <jni.h>
-/*
-jint Java_io_netty_channel_unix_FileDescriptor_close(JNIEnv* env, jclass clazz, jint fd);
-*/
+package io.netty.channel.epoll;
 
-// JNI initialization hooks. Users of this file are responsible for calling these in the JNI_OnLoad and JNI_OnUnload methods.
-jint netty_unix_filedescriptor_JNI_OnLoad(JNIEnv* env, const char* packagePrefix);
-void netty_unix_filedescriptor_JNI_OnUnLoad(JNIEnv* env);
+import java.net.InetSocketAddress;
 
+/**
+ * Act as special {@link InetSocketAddress} to be able to easily pass all needed data from JNI without the need
+ * to create more objects then needed.
+ */
+final class DatagramSocketAddress extends InetSocketAddress {
+
+    private static final long serialVersionUID = 1348596211215015739L;
+
+    // holds the amount of received bytes
+    final int receivedAmount;
+
+    DatagramSocketAddress(String addr, int port, int receivedAmount) {
+        super(addr, port);
+        this.receivedAmount = receivedAmount;
+    }
+}

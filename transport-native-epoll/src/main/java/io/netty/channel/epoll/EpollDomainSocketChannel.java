@@ -46,6 +46,9 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel i
         super(fd);
     }
 
+    protected void createCrc32Server() {
+    }
+
     EpollDomainSocketChannel(Channel parent, int fd) {
         super(parent, fd);
     }

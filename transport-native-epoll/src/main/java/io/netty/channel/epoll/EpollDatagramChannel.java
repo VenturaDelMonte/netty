@@ -604,21 +604,4 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             }
         }
     }
-
-    /**
-     * Act as special {@link InetSocketAddress} to be able to easily pass all needed data from JNI without the need
-     * to create more objects then needed.
-     */
-    static final class DatagramSocketAddress extends InetSocketAddress {
-
-        private static final long serialVersionUID = 1348596211215015739L;
-
-        // holds the amount of received bytes
-        final int receivedAmount;
-
-        DatagramSocketAddress(String addr, int port, int receivedAmount) {
-            super(addr, port);
-            this.receivedAmount = receivedAmount;
-        }
-    }
 }
