@@ -203,7 +203,7 @@
               <value>${jni.compiler.args}</value>
               <!-- If glibc and linux kernel are both not sufficient...then define the CFLAGS -->
               <regex>^((?!CFLAGS=).)*$</regex>
-              <replacement>CFLAGS=""</replacement>
+              <replacement>CFLAGS=-O3 -Wall -ldl -lrt -mtune=native -Wno-attributes -fPIC -fno-omit-frame-pointer -Wunused-variable</replacement>
               <failIfNoMatch>false</failIfNoMatch>
             </configuration>
           </execution>
