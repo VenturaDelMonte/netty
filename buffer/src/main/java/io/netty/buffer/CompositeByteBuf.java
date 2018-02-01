@@ -918,6 +918,11 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
+    public ByteBuf setBytes(int index, ByteBuffer src, int srcIndex, int length) {
+        throw new UnsupportedOperationException("setBytes");
+    }
+
+    @Override
     public CompositeByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
         checkSrcIndex(index, length, srcIndex, src.capacity());
         if (length == 0) {
@@ -1581,6 +1586,11 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public CompositeByteBuf writeBytes(ByteBuffer src) {
         return (CompositeByteBuf) super.writeBytes(src);
+    }
+
+    @Override
+    public ByteBuf writeBytes(ByteBuffer src, int index, int length) {
+        return (CompositeByteBuf) super.writeBytes(src, index, length);
     }
 
     @Override

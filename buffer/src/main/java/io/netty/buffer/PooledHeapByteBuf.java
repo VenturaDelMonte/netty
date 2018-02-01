@@ -221,6 +221,14 @@ final class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
     }
 
     @Override
+    public ByteBuf setBytes(int dstIndex, ByteBuffer src, int srcIndex, int srcLength) {
+        checkIndex(dstIndex, length);
+        src.position(srcIndex);
+        src.get(memory, idx(dstIndex), length);
+        return this;
+    }
+
+    @Override
     public int setBytes(int index, InputStream in, int length) throws IOException {
         checkIndex(index, length);
         return in.read(memory, idx(index), length);

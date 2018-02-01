@@ -863,6 +863,15 @@ public abstract class AbstractByteBuf extends ByteBuf {
     }
 
     @Override
+    public ByteBuf writeBytes(ByteBuffer src, int index, int length) {
+        ensureAccessible();
+        ensureWritable(length);
+        setBytes(writerIndex, src, index, length);
+        writerIndex += length;
+        return this;
+    }
+
+    @Override
     public int writeBytes(InputStream in, int length)
             throws IOException {
         ensureAccessible();

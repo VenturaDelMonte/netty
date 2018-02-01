@@ -648,6 +648,12 @@ final class ReplayingDecoderBuffer extends ByteBuf {
     }
 
     @Override
+    public ByteBuf setBytes(int dstIndex, ByteBuffer src, int srcIndex, int srcLength) {
+        reject();
+        return this;
+    }
+
+    @Override
     public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
         reject();
         return this;
@@ -854,6 +860,12 @@ final class ReplayingDecoderBuffer extends ByteBuf {
 
     @Override
     public ByteBuf writeBytes(ByteBuffer src) {
+        reject();
+        return this;
+    }
+
+    @Override
+    public ByteBuf writeBytes(ByteBuffer src, int index, int length) {
         reject();
         return this;
     }

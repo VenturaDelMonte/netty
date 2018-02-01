@@ -410,6 +410,11 @@ public class SwappedByteBuf extends ByteBuf {
     }
 
     @Override
+    public ByteBuf setBytes(int dstIndex, ByteBuffer src, int srcIndex, int srcLength) {
+        throw new UnsupportedOperationException("setBytes");
+    }
+
+    @Override
     public int setBytes(int index, InputStream in, int length) throws IOException {
         return buf.setBytes(index, in, length);
     }
@@ -641,6 +646,11 @@ public class SwappedByteBuf extends ByteBuf {
     public ByteBuf writeBytes(ByteBuffer src) {
         buf.writeBytes(src);
         return this;
+    }
+
+    @Override
+    public ByteBuf writeBytes(ByteBuffer src, int index, int length) {
+        throw new UnsupportedOperationException("setBytes");
     }
 
     @Override

@@ -120,6 +120,11 @@ public class ReadOnlyByteBuf extends AbstractDerivedByteBuf {
     }
 
     @Override
+    public ByteBuf setBytes(int dstIndex, ByteBuffer src, int srcIndex, int srcLength) {
+       throw new ReadOnlyBufferException();
+    }
+
+    @Override
     public ByteBuf setByte(int index, int value) {
         throw new ReadOnlyBufferException();
     }

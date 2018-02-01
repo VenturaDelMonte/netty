@@ -15,6 +15,9 @@
  */
 package io.netty.buffer;
 
+import org.junit.Test;
+
+import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 import static org.junit.Assert.*;
@@ -37,5 +40,31 @@ public class PooledBigEndianDirectByteBufTest extends AbstractByteBufTest {
     @Override
     protected ByteBuf[] components() {
         return new ByteBuf[] { buffer };
+    }
+
+    @Test
+    public void testWriteBytesWithByteBuffer() {
+        int nioBuffSize = 4 * 256;
+        int nettyBuffSize = nioBuffSize + 8;
+        ByteBuffer nioBuffer = ByteBuffer.allocateDirect(nioBuffSize);
+        for (int i = 0; i < 256; i++) {
+            nioBuffer.putInt(i);
+        }
+        ByteBuf nettyBuff = null;
+        try {
+            nettyBuff = newBuffer(nettyBuffSize);
+            nettyBuff.writeLong(23);
+            nettyBuff.writeBytes(nioBuffer, 0, nioBuffSize);
+            nettyBuff.readerIndex(12);
+            int val = nettyBuff.readInt();
+            assertEquals(1, val);
+            nettyBuff.readerIndex(nettyBuffSize - 4);
+            val = nettyBuff.readInt();
+            assertEquals(255, val);
+        } finally {
+            if (nettyBuff != null) {
+                nettyBuff.release();
+            }
+        }
     }
 }

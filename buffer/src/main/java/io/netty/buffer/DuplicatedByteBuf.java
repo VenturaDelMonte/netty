@@ -253,6 +253,12 @@ public class DuplicatedByteBuf extends AbstractDerivedByteBuf {
     }
 
     @Override
+    public ByteBuf setBytes(int dstIndex, ByteBuffer src, int srcIndex, int srcLength) {
+        buffer.setBytes(dstIndex, src, srcIndex, srcLength);
+        return this;
+    }
+
+    @Override
     public ByteBuf getBytes(int index, OutputStream out, int length)
             throws IOException {
         buffer.getBytes(index, out, length);

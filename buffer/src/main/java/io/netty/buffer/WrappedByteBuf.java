@@ -398,6 +398,11 @@ class WrappedByteBuf extends ByteBuf {
     }
 
     @Override
+    public ByteBuf setBytes(int dstIndex, ByteBuffer src, int srcIndex, int srcLength) {
+        return buf.setBytes(dstIndex, src, srcIndex, srcLength);
+    }
+
+    @Override
     public int setBytes(int index, InputStream in, int length) throws IOException {
         return buf.setBytes(index, in, length);
     }
@@ -628,6 +633,12 @@ class WrappedByteBuf extends ByteBuf {
     @Override
     public ByteBuf writeBytes(ByteBuffer src) {
         buf.writeBytes(src);
+        return this;
+    }
+
+    @Override
+    public ByteBuf writeBytes(ByteBuffer src, int index, int length) {
+        buf.writeBytes(src, index, length);
         return this;
     }
 

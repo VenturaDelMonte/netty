@@ -35,4 +35,5 @@ public class PooledBigEndianHeapByteBufTest extends AbstractByteBufTest {
     protected ByteBuf[] components() {
         return new ByteBuf[] { buffer };
     }
+
 }

@@ -227,6 +227,13 @@ public class SlicedByteBuf extends AbstractDerivedByteBuf {
     }
 
     @Override
+    public ByteBuf setBytes(int dstIndex, ByteBuffer src, int srcIndex, int srcLength) {
+        checkIndex(dstIndex, length);
+        buffer.setBytes(dstIndex + adjustment, src, srcIndex, length);
+        return this;
+    }
+
+    @Override
     public ByteBuf getBytes(int index, OutputStream out, int length) throws IOException {
         checkIndex(index, length);
         buffer.getBytes(index + adjustment, out, length);
