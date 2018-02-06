@@ -181,7 +181,9 @@ public final class NativeLibraryLoader {
             }
         }
 
+        logger.debug("Going to load library {} - {} - {} - {}", name, libname, path, originalName);
         if (url == null) {
+            logger.debug("Going to load library {}", name);
             // Fall back to normal loading of JNI stuff
             System.loadLibrary(name);
             return;
@@ -195,7 +197,9 @@ public final class NativeLibraryLoader {
         File tmpFile = null;
         boolean loaded = false;
         try {
+            logger.debug("Going to first create library copy in {} - {} - {}", prefix, suffix, WORKDIR);
             tmpFile = File.createTempFile(prefix, suffix, WORKDIR);
+            logger.debug("temp file created at {}", tmpFile.getPath());
             in = url.openStream();
             out = new FileOutputStream(tmpFile);
 
@@ -207,8 +211,9 @@ public final class NativeLibraryLoader {
             out.flush();
             out.close();
             out = null;
-
+            logger.debug("temp file ready to be loaded from {}", tmpFile.getPath());
             System.load(tmpFile.getPath());
+            logger.debug("temp file ready to be loaded from {}", tmpFile.getPath());
             loaded = true;
         } catch (Exception e) {
             throw (UnsatisfiedLinkError) new UnsatisfiedLinkError(
