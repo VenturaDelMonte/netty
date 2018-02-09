@@ -28,6 +28,7 @@ import io.netty.channel.FileRegion;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.AbstractSocketTest;
+import io.netty.util.ReferenceCountedFileChannel;
 import io.netty.util.internal.ThreadLocalRandom;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -129,13 +130,15 @@ public class EpollSocketCRC32FileRegionTest extends AbstractSocketTest {
 
         Channel cc = cb.connect().sync().channel();
         FileRegion region = new CRC32FileRegion(
-                new FileInputStream(file).getChannel(), 0, data.length) {
+                new ReferenceCountedFileChannel(new FileInputStream(file).getChannel()),
+                0, data.length) {
             @Override
             public long transferTo(WritableByteChannel target, long position) throws IOException {
                 return 0;
             }
         };
-        FileRegion emptyRegion = new CRC32FileRegion(new FileInputStream(file).getChannel(), 0, 0) {
+        FileRegion emptyRegion = new CRC32FileRegion(new ReferenceCountedFileChannel(
+                new FileInputStream(file).getChannel()), 0, 0) {
             @Override
             public long transferTo(WritableByteChannel target, long position) throws IOException {
                 return 0;
