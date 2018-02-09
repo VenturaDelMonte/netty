@@ -16,6 +16,7 @@
 package io.netty.channel;
 
 import io.netty.util.AbstractReferenceCounted;
+import io.netty.util.ReferenceCountedFileChannel;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -30,18 +31,20 @@ public abstract class CRC32FileRegion extends AbstractReferenceCounted implement
     protected final long position;
     protected final long count;
     protected long transfered;
-    protected FileChannel file;
+    protected final FileChannel file;
+    protected final ReferenceCountedFileChannel refChannel;
+
 
     /**
      * Create a new instance
      *
-     * @param file      the {@link FileChannel} which should be transfered
+     * @param refChannel the {@link ReferenceCountedFileChannel} which should be transfered
      * @param position  the position from which the transfer should start
      * @param count     the number of bytes to transfer
      */
-    public CRC32FileRegion(FileChannel file, long position, long count) {
-        if (file == null) {
-            throw new NullPointerException("file");
+    public CRC32FileRegion(ReferenceCountedFileChannel refChannel, long position, long count) {
+        if (refChannel == null) {
+            throw new NullPointerException("refChannel");
         }
         if (position < 0) {
             throw new IllegalArgumentException("position must be >= 0 but was " + position);
@@ -49,7 +52,8 @@ public abstract class CRC32FileRegion extends AbstractReferenceCounted implement
         if (count < 0) {
             throw new IllegalArgumentException("count must be >= 0 but was " + count);
         }
-        this.file = file;
+        this.file = refChannel.channel();
+        this.refChannel = refChannel;
         this.position = position;
         this.count = count;
     }
@@ -74,19 +78,6 @@ public abstract class CRC32FileRegion extends AbstractReferenceCounted implement
 
     @Override
     protected void deallocate() {
-        FileChannel file = this.file;
-
-        if (file == null) {
-            return;
-        }
-        this.file = null;
-
-        try {
-            file.close();
-        } catch (IOException e) {
-            if (logger.isWarnEnabled()) {
-                logger.warn("Failed to close a file.", e);
-            }
-        }
+        refChannel.release();
     }
 }
