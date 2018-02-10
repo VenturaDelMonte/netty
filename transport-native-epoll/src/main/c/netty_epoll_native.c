@@ -1909,9 +1909,9 @@ jint netty_epoll_native_JNI_OnLoad(JNIEnv* env, const char* packagePrefix) {
         throwRuntimeException(env, "failed to get field ID: DefaultFileRegion.transfered");
         return JNI_ERR;
     }
-    crc32FileChannelFieldId = (*env)->GetFieldID(env, crc32FileRegionCls, "file", "Ljava/nio/channels/FileChannel;");
+    crc32FileChannelFieldId = (*env)->GetFieldID(env, crc32FileRegionCls, "channel", "Ljava/nio/channels/FileChannel;");
     if (fileChannelFieldId == NULL) {
-        throwRuntimeException(env, "failed to get field ID: CRC32FileRegion.file");
+        throwRuntimeException(env, "failed to get field ID: CRC32FileRegion.channel");
         return JNI_ERR;
     }
     crc32TransferedFieldId = (*env)->GetFieldID(env, crc32FileRegionCls, "transfered", "J");
