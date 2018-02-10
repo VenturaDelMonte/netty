@@ -30,10 +30,11 @@ public abstract class CRC32FileRegion extends AbstractReferenceCounted implement
 
     protected final long position;
     protected final long count;
-    protected long transfered;
-    protected final FileChannel file;
-    protected final ReferenceCountedFileChannel refChannel;
 
+    protected long transfered;
+
+    protected final FileChannel channel;
+    protected final ReferenceCountedFileChannel refChannel;
 
     /**
      * Create a new instance
@@ -52,10 +53,11 @@ public abstract class CRC32FileRegion extends AbstractReferenceCounted implement
         if (count < 0) {
             throw new IllegalArgumentException("count must be >= 0 but was " + count);
         }
-        this.file = refChannel.channel();
+        this.channel = refChannel.channel();
         this.refChannel = refChannel;
         this.position = position;
         this.count = count;
+        this.transfered = 0;
     }
 
     @Override
