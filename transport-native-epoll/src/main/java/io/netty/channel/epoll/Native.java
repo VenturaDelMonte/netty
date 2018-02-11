@@ -317,9 +317,9 @@ final class Native {
 
     public static long sendfilecrc32(
             int dest, CRC32FileRegion src, long baseOffset,
-            long offset, long length, int crc32_client) throws IOException {
+            long offset, long length, long count, boolean isChecksumTransferred, int crc32_client) throws IOException {
 
-        long res = sendFileCrc32(dest, src, baseOffset, offset, length, crc32_client);
+        long res = sendFileCrc32(dest, src, baseOffset, offset, length, count, isChecksumTransferred, crc32_client);
         if (res >= 0) {
             return res;
         }
@@ -327,7 +327,8 @@ final class Native {
     }
 
     private static native long sendFileCrc32(
-            int dest, CRC32FileRegion src, long baseOffset, long offset, long length, int fdAlg) throws IOException;
+            int dest, CRC32FileRegion src, long baseOffset, long offset,
+            long length, long count, boolean isChecksumTransferred, int fdAlg) throws IOException;
 
     public static int sendTo(
             int fd, ByteBuffer buf, int pos, int limit, InetAddress addr, int port) throws IOException {

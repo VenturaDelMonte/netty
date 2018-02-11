@@ -136,12 +136,27 @@ public class EpollSocketCRC32FileRegionTest extends AbstractSocketTest {
             public long transferTo(WritableByteChannel target, long position) throws IOException {
                 return 0;
             }
+
+            @Override
+            public long checksumLength() {
+                return 4;
+            }
+
+            @Override
+            public long count() {
+                return data.length + 4;
+            }
         };
         FileRegion emptyRegion = new CRC32FileRegion(new ReferenceCountedFileChannel(
                 new FileInputStream(file).getChannel()), 0, 0) {
             @Override
             public long transferTo(WritableByteChannel target, long position) throws IOException {
                 return 0;
+            }
+
+            @Override
+            public long checksumLength() {
+                return 4;
             }
         };
 

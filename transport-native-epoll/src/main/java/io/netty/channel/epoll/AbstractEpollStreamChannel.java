@@ -236,7 +236,10 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
     private FastThreadLocal<Integer> crc32AlgFdsClients = new FastThreadLocal<Integer>() {
         @Override
         protected Integer initialValue() throws Exception {
-            return Native.connectCrc32Socket(crc32Server);
+            int fd = Native.connectCrc32Socket(crc32Server);
+            Native.setReceiveBufferSize(fd, 65556);
+            Native.setSendBufferSize(fd, 65536);
+            return fd;
         }
 
         @Override
@@ -253,21 +256,25 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
      */
     private boolean writeFileRegionWithCRC32(
             ChannelOutboundBuffer in, CRC32FileRegion region, int writeSpinCount) throws Exception {
-        final long regionCount = region.count();
+        final long regionCount = region.count() - region.checksumLength(); // file size
+
         if (region.transfered() >= regionCount) {
             in.remove();
             return true;
         }
 
+        final boolean isChecksumTransferred = region.isChecksumTrasferred();
         final long baseOffset = region.position();
         boolean done = false;
         long flushedAmount = 0;
+        int crc32_client = crc32AlgFdsClients.get();
+        int fd = fd().intValue();
 
         for (int i = writeSpinCount - 1; i >= 0; i--) {
             final long offset = region.transfered();
-            final long localFlushedAmount =
-                    Native.sendfilecrc32(fd().intValue(), region, baseOffset, offset,
-                            regionCount - offset, crc32AlgFdsClients.get());
+
+            long localFlushedAmount = Native.sendfilecrc32(fd, region, baseOffset,
+                    offset, regionCount - offset, regionCount, isChecksumTransferred, crc32_client);
             if (localFlushedAmount == 0) {
                 break;
             }
