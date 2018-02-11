@@ -80,6 +80,8 @@ public final class EpollSocketChannel extends AbstractEpollStreamChannel impleme
     protected void createCrc32Server() {
         if (config().getOption(EpollChannelOption.CREATE_CRC32_SERVER) && crc32Server == -1) {
             crc32Server = Native.createCrc32Socket();
+            Native.setReceiveBufferSize(crc32Server, 65556);
+            Native.setSendBufferSize(crc32Server, 65536);
         }
     }
 

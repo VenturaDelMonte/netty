@@ -78,6 +78,8 @@ public abstract class CRC32FileRegion extends AbstractReferenceCounted implement
     @Override
     public abstract long transferTo(WritableByteChannel target, long position) throws IOException;
 
+    public abstract long checksumLength();
+
     @Override
     protected void deallocate() {
         refChannel.release();

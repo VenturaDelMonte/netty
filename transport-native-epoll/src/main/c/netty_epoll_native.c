@@ -47,6 +47,14 @@
  */
 #define MAX_EPOLL_TIMEOUT_MSEC (35*60*1000)
 
+#ifdef __GNUC__
+#define likely(x)       __builtin_expect(!!(x),1)
+#define unlikely(x)     __builtin_expect(!!(x),0)
+#else
+#define likely(x)       (x)
+#define unlikely(x)     (x)
+#endif
+
 #ifndef SOL_ALG
 #define SOL_ALG 279
 #endif
@@ -936,46 +944,86 @@ static jint netty_epoll_native_connect_crc32_socket(JNIEnv* env, jclass clazz, j
 }
 
 static jlong netty_epoll_native_sendfile_crc32(JNIEnv* env, jclass clazz, jint fd,
-    jobject fileRegion, jlong base_off, jlong off, jlong len, jint crc32_client) {
+    jobject fileRegion, jlong base_off, jlong off, jlong len, jlong crc_off, jint crc32_client) {
     jobject fileChannel = (*env)->GetObjectField(env, fileRegion, crc32FileChannelFieldId);
-    if (fileChannel == NULL) {
+    if (unlikely(fileChannel == NULL)) {
         throwRuntimeException(env, "failed to get CRC32FileRegion.file");
         return -1;
     }
     jobject fileDescriptor = (*env)->GetObjectField(env, fileChannel, fileDescriptorFieldId);
-    if (fileDescriptor == NULL) {
+    if (unlikely(fileDescriptor == NULL)) {
         throwRuntimeException(env, "failed to get FileChannelImpl.fd");
         return -1;
     }
     jint srcFd = (*env)->GetIntField(env, fileDescriptor, fdFieldId);
-    if (srcFd == -1) {
+    if (unlikely(srcFd == -1)) {
         throwRuntimeException(env, "failed to get FileDescriptor.fd");
         return -1;
     }
-    ssize_t res, res0;
+    ssize_t written = 0;
     off_t offset = base_off + off;
     int err;
 
+    fprintf(stderr, "** called sendfile+crc32 fid=%d off=%ld len=%d base_off=%ld crc_off=%ld\n",
+      srcFd, off, len, base_off, crc_off);
     off_t ofs = offset;
-    uint32_t crc32c = 0;
-    //do {
-      res0 = sendfile(crc32_client, srcFd, &ofs, (size_t) len);
-      read(crc32_client, &crc32c, sizeof(uint32_t));
-      crc32c = ~__bswap_32(~crc32c); // linux kernel leaves this to the user...
-      int crc_sent = send(fd, &crc32c, sizeof(uint32_t), MSG_MORE);
-    //} while (res0 == -1 && ((err = errno) == EINTR));
+    ssize_t sent_crc_bytes = 4;
+    if (likely(crc_off < sizeof(uint32_t))) {
+        sent_crc_bytes = 0;
+        uint32_t crc32c = 0;
+        int enabled_cork = 1;
+        setOption(env, fd, SOL_TCP, TCP_CORK, &enabled_cork, sizeof(enabled_cork));
+        do {
+          fprintf(stderr, "** sending to crc32server from src=%d dst=%d ofs=%ld len=%ld\n", srcFd, crc32_client, ofs, len);
+          written = sendfile(crc32_client, srcFd, &ofs, (size_t) len);
+          fprintf(stderr, "** sent to crc32server from src=%d dest=%d ofs=%ld len=%ld: sent=%ld\n", srcFd, crc32_client, ofs, len, written);
+        } while ((ofs < (len + base_off)) || (written == -1 && ((err = errno) == EINTR)));
 
+        if (unlikely(written < 0)) {
+          return -err;
+        }
+
+        enabled_cork = 0;
+        setOption(env, fd, SOL_TCP, TCP_CORK, &enabled_cork, sizeof(enabled_cork));
+
+        ssize_t read_crc_bytes = 0;
+        do {
+            read_crc_bytes = read(crc32_client, &crc32c, sizeof(uint32_t));
+        } while (read_crc_bytes == -1 && ((err = errno) == EINTR));
+
+        crc32c = ~__bswap_32(~crc32c); // linux kernel leaves this to the user...
+        fprintf(stderr, "** read crc32 from crc32server res=%x size=%ld\n", crc32c, read_crc_bytes);
+
+        do {
+          fprintf(stderr, "** sending crc32 to client res=%x fd=%d size=%ld off=%ld\n", crc32c, fd, read_crc_bytes, crc_off);
+          written = send(fd, &crc32c + crc_off, sizeof(uint32_t) - crc_off, MSG_MORE);
+          crc_off += written;
+          fprintf(stderr, "** sent crc32 to client res=%x fd=%d size=%ld off=%ld\n", crc32c, fd, written, crc_off);
+        } while (written == -1 && ((err = errno) == EINTR));
+
+        if (unlikely(written < 0)) {
+          return -err;
+        }
+
+        sent_crc_bytes = written;
+        (*env)->SetLongField(env, fileRegion, crc32TransferedFieldId, off + sent_crc_bytes);
+    }
+
+    ofs = offset;
     do {
-      res = sendfile(fd, srcFd, &offset, (size_t) len);
-    } while (res == -1 && ((err = errno) == EINTR));
-    if (res < 0) {
+      fprintf(stderr, "** sending data to client src=%d dest=%d ofs=%ld len=%ld\n", srcFd, fd, ofs, len);
+      written = sendfile(fd, srcFd, &ofs, (size_t) len);
+      fprintf(stderr, "** sent data to client src=%d dest=%d ofs=%ld len=%ld written=%ld\n", srcFd, fd, ofs, len, written);
+    } while ((written == -1 && ((err = errno) == EINTR)));
+
+    if (unlikely(written < 0)) {
         return -err;
-    }
-    if (res > 0) {
+    } else if (likely(written > 0)) {
         // update the transfered field in DefaultFileRegion
-        (*env)->SetLongField(env, fileRegion, crc32TransferedFieldId, off + res);
+        (*env)->SetLongField(env, fileRegion, crc32TransferedFieldId, off + written + sent_crc_bytes);
+        fprintf(stderr, "** updated transfered field to %ld requested=%ld\n", off + written + sent_crc_bytes, off + len);
     }
-    return res + crc_sent;
+    return written + sent_crc_bytes;
 }
 
 static jbyteArray netty_epoll_native_remoteAddress0(JNIEnv* env, jclass clazz, jint fd) {
@@ -1688,7 +1736,7 @@ static JNINativeMethod* createDynamicMethodsTable(const char* packagePrefix) {
     free(dynamicTypeName);
 
     ++dynamicMethod;
-    dynamicTypeName = netty_unix_util_prepend(packagePrefix, "io/netty/channel/CRC32FileRegion;JJJI)J");
+    dynamicTypeName = netty_unix_util_prepend(packagePrefix, "io/netty/channel/CRC32FileRegion;JJJJI)J");
     dynamicMethod->name = "sendFileCrc32";
     dynamicMethod->signature = netty_unix_util_prepend("(IL", dynamicTypeName);
     dynamicMethod->fnPtr = (void *) netty_epoll_native_sendfile_crc32;
