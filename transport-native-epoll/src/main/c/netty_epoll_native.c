@@ -963,9 +963,10 @@ static jlong netty_epoll_native_sendfile_crc32(JNIEnv* env, jclass clazz, jint f
     ssize_t written = 0;
     off_t offset = base_off + off;
     int err;
-
+#ifdef DEBUG_NETTY_CRC32
     fprintf(stderr, "** called sendfile+crc32 fid=%d off=%ld len=%d base_off=%ld crc_off=%ld\n",
       srcFd, off, len, base_off, crc_off);
+#endif
     off_t ofs = offset;
     ssize_t sent_crc_bytes = 4;
     if (likely(crc_off < sizeof(uint32_t))) {
@@ -974,9 +975,13 @@ static jlong netty_epoll_native_sendfile_crc32(JNIEnv* env, jclass clazz, jint f
         int enabled_cork = 1;
         setOption(env, fd, SOL_TCP, TCP_CORK, &enabled_cork, sizeof(enabled_cork));
         do {
+#ifdef DEBUG_NETTY_CRC32
           fprintf(stderr, "** sending to crc32server from src=%d dst=%d ofs=%ld len=%ld\n", srcFd, crc32_client, ofs, len);
+#endif
           written = sendfile(crc32_client, srcFd, &ofs, (size_t) len);
+#ifdef DEBUG_NETTY_CRC32
           fprintf(stderr, "** sent to crc32server from src=%d dest=%d ofs=%ld len=%ld: sent=%ld\n", srcFd, crc32_client, ofs, len, written);
+#endif
         } while ((ofs < (len + base_off)) || (written == -1 && ((err = errno) == EINTR)));
 
         if (unlikely(written < 0)) {
@@ -992,13 +997,18 @@ static jlong netty_epoll_native_sendfile_crc32(JNIEnv* env, jclass clazz, jint f
         } while (read_crc_bytes == -1 && ((err = errno) == EINTR));
 
         crc32c = ~__bswap_32(~crc32c); // linux kernel leaves this to the user...
+#ifdef DEBUG_NETTY_CRC32
         fprintf(stderr, "** read crc32 from crc32server res=%x size=%ld\n", crc32c, read_crc_bytes);
-
+#endif
         do {
+#ifdef DEBUG_NETTY_CRC32
           fprintf(stderr, "** sending crc32 to client res=%x fd=%d size=%ld off=%ld\n", crc32c, fd, read_crc_bytes, crc_off);
+#endif
           written = send(fd, &crc32c + crc_off, sizeof(uint32_t) - crc_off, MSG_MORE);
           crc_off += written;
+#ifdef DEBUG_NETTY_CRC32
           fprintf(stderr, "** sent crc32 to client res=%x fd=%d size=%ld off=%ld\n", crc32c, fd, written, crc_off);
+#endif
         } while (written == -1 && ((err = errno) == EINTR));
 
         if (unlikely(written < 0)) {
@@ -1011,9 +1021,13 @@ static jlong netty_epoll_native_sendfile_crc32(JNIEnv* env, jclass clazz, jint f
 
     ofs = offset;
     do {
+#ifdef DEBUG_NETTY_CRC32
       fprintf(stderr, "** sending data to client src=%d dest=%d ofs=%ld len=%ld\n", srcFd, fd, ofs, len);
+#endif
       written = sendfile(fd, srcFd, &ofs, (size_t) len);
+#ifdef DEBUG_NETTY_CRC32
       fprintf(stderr, "** sent data to client src=%d dest=%d ofs=%ld len=%ld written=%ld\n", srcFd, fd, ofs, len, written);
+#endif
     } while ((written == -1 && ((err = errno) == EINTR)));
 
     if (unlikely(written < 0)) {
@@ -1021,7 +1035,9 @@ static jlong netty_epoll_native_sendfile_crc32(JNIEnv* env, jclass clazz, jint f
     } else if (likely(written > 0)) {
         // update the transfered field in DefaultFileRegion
         (*env)->SetLongField(env, fileRegion, crc32TransferedFieldId, off + written + sent_crc_bytes);
+#ifdef DEBUG_NETTY_CRC32
         fprintf(stderr, "** updated transfered field to %ld requested=%ld\n", off + written + sent_crc_bytes, off + len);
+#endif
     }
     return written + sent_crc_bytes;
 }
