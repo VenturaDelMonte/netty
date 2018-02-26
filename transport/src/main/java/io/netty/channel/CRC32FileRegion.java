@@ -32,6 +32,7 @@ public abstract class CRC32FileRegion extends AbstractReferenceCounted implement
     protected final long count;
 
     protected long transfered;
+    protected boolean checksumTrasferred;
 
     protected final FileChannel channel;
     protected final ReferenceCountedFileChannel refChannel;
@@ -73,6 +74,10 @@ public abstract class CRC32FileRegion extends AbstractReferenceCounted implement
     @Override
     public long count() {
         return count;
+    }
+
+    public boolean isChecksumTrasferred() {
+        return checksumTrasferred;
     }
 
     @Override

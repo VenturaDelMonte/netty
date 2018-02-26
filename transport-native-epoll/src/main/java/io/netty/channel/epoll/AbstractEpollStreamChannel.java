@@ -256,14 +256,14 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
      */
     private boolean writeFileRegionWithCRC32(
             ChannelOutboundBuffer in, CRC32FileRegion region, int writeSpinCount) throws Exception {
-        final long regionCount = region.count(); // file size + chksm len
-        final long checksumLen = region.checksumLength();
+        final long regionCount = region.count() - region.checksumLength(); // file size
+
         if (region.transfered() >= regionCount) {
             in.remove();
             return true;
         }
 
-        long len = regionCount - checksumLen;
+        final boolean isChecksumTransferred = region.isChecksumTrasferred();
         final long baseOffset = region.position();
         boolean done = false;
         long flushedAmount = 0;
@@ -271,21 +271,10 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel {
         int fd = fd().intValue();
 
         for (int i = writeSpinCount - 1; i >= 0; i--) {
-            long offset = region.transfered();
-            long file_offset = 0;
-            long crc_offset = 0;
-            if (offset > 0) {
-                if (offset < checksumLen) {
-                    crc_offset = checksumLen - offset;
-                } else {
-                    file_offset = offset - checksumLen;
-                    len -= offset - checksumLen;
-                    crc_offset = checksumLen;
-                }
-            }
+            final long offset = region.transfered();
 
             long localFlushedAmount = Native.sendfilecrc32(fd, region, baseOffset,
-                    file_offset, len, crc_offset, crc32_client);
+                    offset, regionCount - offset, regionCount, isChecksumTransferred, crc32_client);
             if (localFlushedAmount == 0) {
                 break;
             }
