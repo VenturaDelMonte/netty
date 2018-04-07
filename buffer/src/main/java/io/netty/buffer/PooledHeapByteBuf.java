@@ -134,6 +134,11 @@ class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
     }
 
     @Override
+    public ByteBuf setBytes(int dstIndex, ByteBuffer src, int srcIndex, int length) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     protected void _setByte(int index, int value) {
         HeapByteBufUtil.setByte(memory, idx(index), value);
     }

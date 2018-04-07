@@ -859,6 +859,17 @@ final class ReplayingDecoderByteBuf extends ByteBuf {
     }
 
     @Override
+    public ByteBuf setBytes(int dstIndex, ByteBuffer src, int srcIndex, int length) {
+        reject();
+        return this;
+    }
+
+    @Override
+    public ByteBuf writeBytes(ByteBuffer src, int index, int length) {
+        return null;
+    }
+
+    @Override
     public ByteBuf writeBytes(ByteBuf src, int srcIndex, int length) {
         reject();
         return this;

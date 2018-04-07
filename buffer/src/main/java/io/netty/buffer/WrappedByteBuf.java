@@ -639,6 +639,18 @@ class WrappedByteBuf extends ByteBuf {
     }
 
     @Override
+    public ByteBuf setBytes(int dstIndex, ByteBuffer src, int srcIndex, int length) {
+        buf.setBytes(dstIndex, src, srcIndex, length);
+        return this;
+    }
+
+    @Override
+    public ByteBuf writeBytes(ByteBuffer src, int index, int length) {
+        buf.writeBytes(src, index, length);
+        return this;
+    }
+
+    @Override
     public int writeBytes(InputStream in, int length) throws IOException {
         return buf.writeBytes(in, length);
     }

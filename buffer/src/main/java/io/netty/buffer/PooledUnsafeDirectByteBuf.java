@@ -164,6 +164,24 @@ final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
     }
 
     @Override
+    public ByteBuf setBytes(int dstIndex, ByteBuffer src, int srcIndex, int length) {
+        ensureAccessible();
+        if (PlatformDependent.hasUnsafe()) {
+            long srcMemAddress = PlatformDependent.directBufferAddress(src);
+            PlatformDependent.copyMemory(srcMemAddress + srcIndex, addr(dstIndex), length);
+        } else {
+            ByteBuffer tmpBuf = internalNioBuffer();
+            if (src == tmpBuf) {
+                src = src.duplicate();
+            }
+            tmpBuf.clear().position(dstIndex).limit(dstIndex + length);
+            src.position(srcIndex).limit(srcIndex + length);
+            tmpBuf.put(src);
+        }
+        return this;
+    }
+
+    @Override
     protected void _setByte(int index, int value) {
         UnsafeByteBufUtil.setByte(addr(index), (byte) value);
     }

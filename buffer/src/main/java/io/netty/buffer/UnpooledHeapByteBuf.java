@@ -231,6 +231,11 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
+    public ByteBuf setBytes(int dstIndex, ByteBuffer src, int srcIndex, int length) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
         checkSrcIndex(index, length, srcIndex, src.capacity());
         if (src.hasMemoryAddress()) {

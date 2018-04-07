@@ -453,4 +453,22 @@ public class UnpooledUnsafeDirectByteBuf extends AbstractReferenceCountedByteBuf
         writerIndex = wIndex + length;
         return this;
     }
+
+        @Override
+    public ByteBuf setBytes(int dstIndex, ByteBuffer src, int srcIndex, int srcLength) {
+        ensureAccessible();
+        if (PlatformDependent.hasUnsafe()) {
+            long srcMemAddress = PlatformDependent.directBufferAddress(src);
+            PlatformDependent.copyMemory(srcMemAddress + srcIndex, addr(dstIndex), srcLength);
+        } else {
+            ByteBuffer tmpBuf = internalNioBuffer();
+            if (src == tmpBuf) {
+                src = src.duplicate();
+            }
+            tmpBuf.clear().position(dstIndex).limit(dstIndex + srcLength);
+            src.position(srcIndex).limit(srcIndex + srcLength);
+            tmpBuf.put(src);
+        }
+        return this;
+    }
 }

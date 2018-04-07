@@ -343,6 +343,13 @@ public class SlicedByteBuf extends AbstractDerivedByteBuf {
     }
 
     @Override
+    public ByteBuf setBytes(int dstIndex, ByteBuffer src, int srcIndex, int srcLength) {
+        checkIndex(dstIndex, length);
+        buffer.setBytes(dstIndex + adjustment, src, srcIndex, length);
+        return this;
+    }
+
+    @Override
     public int forEachByteDesc(int index, int length, ByteBufProcessor processor) {
         checkIndex0(index, length);
         int ret = unwrap().forEachByteDesc(idx(index), length, processor);

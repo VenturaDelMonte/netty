@@ -1712,6 +1712,16 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
     }
 
     @Override
+    public ByteBuf setBytes(int dstIndex, ByteBuffer src, int srcIndex, int length) {
+        throw new UnsupportedOperationException("setBytes");
+    }
+
+    @Override
+    public ByteBuf writeBytes(ByteBuffer src, int index, int length) {
+        throw new UnsupportedOperationException("writeBytes");
+    }
+
+    @Override
     public CompositeByteBuf writeZero(int length) {
         return (CompositeByteBuf) super.writeZero(length);
     }

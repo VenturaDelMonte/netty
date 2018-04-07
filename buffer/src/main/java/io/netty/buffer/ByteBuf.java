@@ -1502,6 +1502,10 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf> {
      */
     public abstract ByteBuf writeBytes(ByteBuffer src);
 
+    public abstract ByteBuf setBytes(int dstIndex, ByteBuffer src, int srcIndex, int length);
+
+    public abstract ByteBuf writeBytes(ByteBuffer src, int index, int length);
+
     /**
      * Transfers the content of the specified stream to this buffer
      * starting at the current {@code writerIndex} and increases the

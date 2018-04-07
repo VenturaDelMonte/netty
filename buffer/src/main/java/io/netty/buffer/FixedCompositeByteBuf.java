@@ -168,6 +168,11 @@ final class FixedCompositeByteBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
+    public ByteBuf setBytes(int dstIndex, ByteBuffer src, int srcIndex, int length) {
+        throw new ReadOnlyBufferException();
+    }
+
+    @Override
     public int capacity() {
         return capacity;
     }

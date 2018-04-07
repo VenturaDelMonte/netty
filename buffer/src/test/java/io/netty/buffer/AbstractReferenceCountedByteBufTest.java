@@ -205,6 +205,11 @@ public class AbstractReferenceCountedByteBufTest {
             }
 
             @Override
+            public ByteBuf setBytes(int dstIndex, ByteBuffer src, int srcIndex, int length) {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
             public ByteBuf copy(int index, int length) {
                 throw new UnsupportedOperationException();
             }

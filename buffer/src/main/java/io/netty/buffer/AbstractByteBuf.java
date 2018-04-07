@@ -933,6 +933,15 @@ public abstract class AbstractByteBuf extends ByteBuf {
     }
 
     @Override
+    public ByteBuf writeBytes(ByteBuffer src, int index, int length) {
+        ensureAccessible();
+        ensureWritable(length);
+        setBytes(writerIndex, src, index, length);
+        writerIndex += length;
+        return this;
+    }
+
+    @Override
     public ByteBuf copy() {
         return copy(readerIndex, readableBytes());
     }

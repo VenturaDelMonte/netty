@@ -194,6 +194,11 @@ public class ReadOnlyByteBuf extends AbstractDerivedByteBuf {
     }
 
     @Override
+    public ByteBuf setBytes(int dstIndex, ByteBuffer src, int srcIndex, int length) {
+        throw new ReadOnlyBufferException();
+    }
+
+    @Override
     public int getBytes(int index, GatheringByteChannel out, int length)
             throws IOException {
         return unwrap().getBytes(index, out, length);

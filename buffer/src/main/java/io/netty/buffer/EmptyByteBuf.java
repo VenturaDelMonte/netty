@@ -627,6 +627,16 @@ public final class EmptyByteBuf extends ByteBuf {
     }
 
     @Override
+    public ByteBuf setBytes(int dstIndex, ByteBuffer src, int srcIndex, int length) {
+        return checkIndex(dstIndex, length);
+    }
+
+    @Override
+    public ByteBuf writeBytes(ByteBuffer src, int index, int length) {
+        return checkLength(length);
+    }
+
+    @Override
     public int writeBytes(InputStream in, int length) {
         checkLength(length);
         return 0;

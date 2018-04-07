@@ -283,6 +283,11 @@ public class DuplicatedByteBuf extends AbstractDerivedByteBuf {
     }
 
     @Override
+    public ByteBuf setBytes(int dstIndex, ByteBuffer src, int srcIndex, int length) {
+        return unwrap().setBytes(dstIndex, src, srcIndex, length);
+    }
+
+    @Override
     public int nioBufferCount() {
         return unwrap().nioBufferCount();
     }
