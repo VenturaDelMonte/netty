@@ -142,6 +142,11 @@ final class ReadOnlyUnsafeDirectByteBuf extends ReadOnlyByteBufferBuf {
         return memoryAddress;
     }
 
+    @Override
+    protected void deallocate() {
+        PlatformDependent.freeDirectBuffer(buffer);
+    }
+
     private long addr(int index) {
         return memoryAddress + index;
     }

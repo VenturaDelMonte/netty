@@ -43,7 +43,11 @@ class ReadOnlyByteBufferBuf extends AbstractReferenceCountedByteBuf {
         }
 
         this.allocator = allocator;
-        this.buffer = buffer.slice().order(ByteOrder.BIG_ENDIAN);
+        if (buffer.order() == ByteOrder.BIG_ENDIAN) {
+            this.buffer = buffer;
+        } else {
+            this.buffer = buffer.slice().order(ByteOrder.BIG_ENDIAN);
+        }
         writerIndex(this.buffer.limit());
     }
 
